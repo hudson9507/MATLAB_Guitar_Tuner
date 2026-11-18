@@ -1,0 +1,41 @@
+Person 1 — Audio processing and noise filtering
+DSP / Signal preparation
+
+Responsible for getting clear guitar audio into MATLAB.
+- Capture audio using a microphone.
+- Choose a suitable sampling frequency.
+- Implement a bandpass filter.
+- Apply a silence threshold to reject background noise.
+- Plot signals before and after filtering.
+- Test the filter with clean and noisy recordings.
+Deliverable: processAudio.m, a function that takes raw audio and returns filtered audio.
+
+
+
+
+Person 2 — Frequency detection and tuning logic
+DSP / Mathematical analysis
+
+Responsible for determining which pitch the guitar is producing.
+- Implement a Fast Fourier Transform (FFT).
+- Find the fundamental frequency of the guitar string.
+- Compare the detected frequency with the six reference frequencies.
+- Calculate frequency error and tuning error in cents.
+- Determine whether to tighten or loosen the string.
+- Investigate harmonic interference and inaccurate FFT peaks.
+Deliverable: detectPitch.m and checkTuning.m.
+
+
+
+
+Person 3 — Real-time processing and interface
+Application / Integration
+
+Responsible for making the tuner usable.
+- Continuously acquire and process microphone audio.
+- Integrate the other two members' functions.
+- Create the tuner display using MATLAB figures or App Designer.
+- Show the detected string, frequency, and tuning direction.
+- Handle silence and invalid detections.
+- Measure and reduce display latency.
+Deliverable: guitarTuner.m, the main application.
