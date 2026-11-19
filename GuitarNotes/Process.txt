@@ -1,0 +1,1 @@
+All of these notes are taken from the StandardTuning.mp3, the sharp and flat have all had their frequencies changed using the MATLAB code found in FlatSharpConversion. 
