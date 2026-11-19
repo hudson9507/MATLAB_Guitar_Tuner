@@ -1,4 +1,4 @@
-Person 1 — Audio processing and noise filtering
+Person 1 — Audio processing and noise filtering - Jackson
 DSP / Signal preparation
 
 Responsible for getting clear guitar audio into MATLAB.
@@ -13,7 +13,7 @@ Deliverable: processAudio.m, a function that takes raw audio and returns filtere
 
 
 
-Person 2 — Frequency detection and tuning logic
+Person 2 — Frequency detection and tuning logic - Hudson
 DSP / Mathematical analysis
 
 Responsible for determining which pitch the guitar is producing.
@@ -28,7 +28,7 @@ Deliverable: detectPitch.m and checkTuning.m.
 
 
 
-Person 3 — Real-time processing and interface
+Person 3 — Real-time processing and interface - Noah
 Application / Integration
 
 Responsible for making the tuner usable.
