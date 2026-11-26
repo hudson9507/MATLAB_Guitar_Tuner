@@ -1,11 +1,9 @@
 function [note, cents, status, action, frequencyError] = ...
     checkTuning(detectedFreq, selectedString)
 % checkTuning - Compare detected pitch to standard guitar tuning
-%
 % Inputs:
-%   detectedFreq  - Fundamental frequency in Hz
+%   detectedFreq   - Fundamental frequency in Hz
 %   selectedString - Optional string name, e.g. "A2"
-%
 % Outputs:
 %   note           - Identified guitar string
 %   cents          - Tuning error in cents
@@ -13,7 +11,7 @@ function [note, cents, status, action, frequencyError] = ...
 %   action         - Tighten, Loosen, or None
 %   frequencyError - Difference from target in Hz
 
-% STEP 1: Reference notes from the proposal
+% STEP 1: Shared reference notes (also used by report graphs)
 notes = ["E2", "A2", "D3", "G3", "B3", "E4"];
 
 referenceFreqs = ...

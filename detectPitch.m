@@ -1,100 +1,67 @@
+
 function fundamentalFreq = detectPitch(audio, Fs)
-% detectPitch - Estimate guitar fundamental frequency using FFT
-%
-% Inputs:
-%   audio - Audio samples from a WAV file or microphone
-%   Fs    - Sampling frequency in Hz
-%
-% Output:
-%   fundamentalFreq - Estimated fundamental frequency (Hz)
-%                     NaN if no usable signal is detected
+% detectPitch - Detect the fundamental frequency of a guitar string
 
-% STEP 1: Convert stereo to mono if necessary
-if size(audio, 2) > 1
-    audio = mean(audio, 2);
-end
+%% STEP 1: Convert audio to mono
 
-audio = double(audio(:));
+audio = mean(audio, 2);
 
-% STEP 2: Check the input
-if isempty(audio) || Fs <= 0
-    fundamentalFreq = NaN;
-    return;
-end
+%% STEP 2: Remove DC offset
 
-% Limit analysis to the first 0.5 seconds
-maxSamples = round(0.5 * Fs);
-audio = audio(1:min(length(audio), maxSamples));
-
-N = length(audio);
-
-if N < 3 || max(abs(audio)) < 0.001
-    fundamentalFreq = NaN;
-    return;
-end
-
-% STEP 3: Remove DC offset
 audio = audio - mean(audio);
 
-% STEP 4: Apply a Hann window
-n = (0:N-1)';
-window = 0.5 * (1 - cos(2*pi*n/(N-1)));
-windowedAudio = audio .* window;
+% Check for invalid or silent audio
+if isempty(audio) || max(abs(audio)) < 1e-6
+    fundamentalFreq = NaN;
+    return;
+end
 
-% STEP 5: Compute FFT with zero-padding
-NFFT = 2^nextpow2(4*N);
-Y = fft(windowedAudio, NFFT);
+%% STEP 3: Select audio duration
 
-% STEP 6: Positive-frequency magnitude spectrum
-halfN = floor(NFFT/2) + 1;
+N = min(length(audio), round(0.5 * Fs));
+audio = audio(1:N);
 
-magnitude = abs(Y(1:halfN));
-frequencies = (0:halfN-1)' * Fs/NFFT;
+%% STEP 4: Apply Hann window
 
-% Normalize magnitude
-magnitude = magnitude / (max(magnitude) + eps);
+window = 0.5 - 0.5*cos(2*pi*(0:N-1)'/(N-1));
+audio = audio .* window;
 
-% STEP 7: Search for the guitar fundamental
-% Covers standard E2 through E4, with some detuning
-candidates = (75:0.05:360)';
+%% STEP 5: Calculate zero-padded FFT
+
+NFFT = 2^nextpow2(8 * N);
+
+Y = fft(audio, NFFT);
+
+magnitude = abs(Y(1:NFFT/2+1));
+
+frequencies = (0:NFFT/2)' * Fs / NFFT;
+
+%% STEP 6: Define possible fundamental frequencies
+
+candidates = 75:0.05:360;
+
 scores = zeros(size(candidates));
 
-% STEP 8: Harmonic summation
+%% STEP 7: Weighted harmonic summation
+
 numHarmonics = 5;
 
 for h = 1:numHarmonics
 
-    harmonicFreq = candidates * h;
+    harmonicFreqs = h * candidates;
 
-    % Check near the expected harmonic frequency
-    peakStrength = zeros(size(candidates));
+    harmonicMagnitudes = interp1( ...
+        frequencies, magnitude, ...
+        harmonicFreqs, 'linear', 0);
 
-    for offset = -2:1:2
-        strengths = interp1( ...
-            frequencies, magnitude, ...
-            harmonicFreq + offset, 'linear', 0);
+    scores = scores + harmonicMagnitudes / h;
 
-        peakStrength = max(peakStrength, strengths);
-    end
-
-    % Give lower harmonics more weight
-    scores = scores + peakStrength / sqrt(h);
 end
 
-% STEP 9: Select the best fundamental candidate
-% Find the best frequency using harmonic summation
-[~, bestIndex] = max(scores);
-estimatedFreq = candidates(bestIndex);
+%% STEP 8: Identify the fundamental frequency
 
-% Refine using the strongest FFT peak near that estimate
-searchRange = frequencies >= estimatedFreq - 3 & ...
-              frequencies <= estimatedFreq + 3;
+[~, index] = max(scores);
 
-localFreqs = frequencies(searchRange);
-localMags = magnitude(searchRange);
-
-[~, peakIndex] = max(localMags);
-
-fundamentalFreq = localFreqs(peakIndex);
+fundamentalFreq = candidates(index);
 
 end
