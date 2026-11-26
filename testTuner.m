@@ -1,5 +1,17 @@
 clear;
 clc;
+% testTuner - Test guitar tuner performance on an individual audio recording
+% Inputs:
+%   selectedString - Target guitar string, e.g. "A2"
+%   folder         - Folder containing the desired tuning condition
+%   fileName       - Name of the WAV audio recording
+% Outputs:
+%   detectedFreq   - Median fundamental frequency in Hz
+%   note           - Identified guitar string
+%   frequencyError - Difference from target frequency in Hz
+%   cents          - Tuning error in cents
+%   status         - Flat, Sharp, In Tune, or No Signal
+%   action         - Tighten, Loosen, or None
 
 % Select the recording and its intended guitar string.
 selectedString = "B3";
@@ -23,6 +35,7 @@ end
     checkTuning(detectedFreq, selectedString);
 [identifiedNote, ~, ~] = checkTuning(detectedFreq);
 
+%print results
 fprintf('\nDetected Frequency: %.2f Hz\n', detectedFreq);
 fprintf('Detected Note: %s\n', identifiedNote);
 fprintf('Target Note: %s\n', note);
