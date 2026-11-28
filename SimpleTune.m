@@ -1,4 +1,4 @@
-classdef SimpleTune_Final < matlab.apps.AppBase
+classdef SimpleTune < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -28,28 +28,48 @@ classdef SimpleTune_Final < matlab.apps.AppBase
 
         % Value changed function: Switch
         function SwitchValueChanged(app, event)
-            %listen for input
-            fs = 44100
+            % Record and process two seconds of microphone audio.
+            fs = 44100;
             rec = audiorecorder(fs, 16, 1);
-
-            recordblocking(rec, 2);   % start listening
-            % ...later:          
+            recordblocking(rec, 2);
             audio = getaudiodata(rec);
-            
+            cleansound = processAudio(audio, fs);
+            quantSound = measurePitch(cleansound, fs);
 
-            [cleansound] = processAudio (audio, fs)
-            
-            [quantSound] =  measurePitch(cleansound, fs)
+            % Reject invalid pitch estimates.
+            if ~isnumeric(quantSound) || ~isscalar(quantSound) || ...
+                    ~isreal(quantSound) || ~isfinite(quantSound) || quantSound <= 0
+                app.WaitingLabel.Text = 'No valid pitch';
+                app.UnknownLabel.Text = 'Unknown';
+                app.HtzLabel_2.Text = '-- cents';
+                app.NoneLabel.Text = 'Try again';
+                return;
+            end
 
-            disp(quantSound)
-            [nearestNote, frequency, status, recom_action] = checkTuning(quantSound)    
+            % Standard guitar tuning (A4 = 440 Hz).
+            notes = ["E2", "A2", "D3", "G3", "B3", "E4"];
+            referenceHz = 440 * 2.^(([40 45 50 55 59 64] - 69)/12);
+            deviations = 1200 * log2(quantSound ./ referenceHz);
+            [~, idx] = min(abs(deviations));
+            nearestNote = notes(idx);
+            cents = deviations(idx);
 
-            FrequencyData= (frequency + " " + status)
+            % Apply the same +/- 5 cent tolerance as the report.
+            if cents < -5
+                status = 'Flat';
+                recom_action = 'Tighten string';
+            elseif cents > 5
+                status = 'Sharp';
+                recom_action = 'Loosen string';
+            else
+                status = 'In tune';
+                recom_action = 'No adjustment';
+            end
 
-            app.WaitingLabel.Text = ("analyzed")
-            app.UnknownLabel.Text = string(nearestNote)
-            app.HtzLabel_2.Text = string(FrequencyData)
-            app.NoneLabel.Text = string(recom_action)
+            app.WaitingLabel.Text = sprintf('%.2f Hz', quantSound);
+            app.UnknownLabel.Text = char(nearestNote);
+            app.HtzLabel_2.Text = sprintf('%+.2f cents (%s)', cents, status);
+            app.NoneLabel.Text = recom_action;
         end
 
         % Button down function: LeftPanel
@@ -125,7 +145,7 @@ classdef SimpleTune_Final < matlab.apps.AppBase
             % Create FrequencydiffLabel
             app.FrequencydiffLabel = uilabel(app.LeftPanel);
             app.FrequencydiffLabel.Position = [48 116 87 30];
-            app.FrequencydiffLabel.Text = 'Frequency diff.';
+            app.FrequencydiffLabel.Text = 'Tuning error:';
 
             % Create SuggestionLabel
             app.SuggestionLabel = uilabel(app.LeftPanel);
@@ -139,7 +159,7 @@ classdef SimpleTune_Final < matlab.apps.AppBase
 
             % Create WaitingLabel
             app.WaitingLabel = uilabel(app.LeftPanel);
-            app.WaitingLabel.Position = [177 210 79 22];
+            app.WaitingLabel.Position = [177 210 125 22];
             app.WaitingLabel.Text = 'Waiting...';
 
             % Create UnknownLabel
@@ -149,8 +169,8 @@ classdef SimpleTune_Final < matlab.apps.AppBase
 
             % Create HtzLabel_2
             app.HtzLabel_2 = uilabel(app.LeftPanel);
-            app.HtzLabel_2.Position = [177 120 79 22];
-            app.HtzLabel_2.Text = '___Htz';
+            app.HtzLabel_2.Position = [145 120 165 22];
+            app.HtzLabel_2.Text = '-- cents';
 
             % Create NoneLabel
             app.NoneLabel = uilabel(app.LeftPanel);
@@ -171,7 +191,7 @@ classdef SimpleTune_Final < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = SimpleTune_Final
+        function app = SimpleTune
 
             % Create UIFigure and components
             createComponents(app)
