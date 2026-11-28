@@ -28,48 +28,57 @@ classdef SimpleTune < matlab.apps.AppBase
 
         % Value changed function: Switch
         function SwitchValueChanged(app, event)
-            % Record and process two seconds of microphone audio.
-            fs = 44100;
-            rec = audiorecorder(fs, 16, 1);
-            recordblocking(rec, 2);
-            audio = getaudiodata(rec);
-            cleansound = processAudio(audio, fs);
-            quantSound = measurePitch(cleansound, fs);
-
-            % Reject invalid pitch estimates.
-            if ~isnumeric(quantSound) || ~isscalar(quantSound) || ...
-                    ~isreal(quantSound) || ~isfinite(quantSound) || quantSound <= 0
-                app.WaitingLabel.Text = 'No valid pitch';
-                app.UnknownLabel.Text = 'Unknown';
-                app.HtzLabel_2.Text = '-- cents';
-                app.NoneLabel.Text = 'Try again';
+            if strcmp(app.Switch.Value, 'Off')       % switch turned off: stop and reset
+                app.WaitingLabel.Text = 'Waiting...';
                 return;
             end
 
-            % Standard guitar tuning (A4 = 440 Hz).
+            fs = 44100;
+            rec = audiorecorder(fs, 16, 1);
             notes = ["E2", "A2", "D3", "G3", "B3", "E4"];
             referenceHz = 440 * 2.^(([40 45 50 55 59 64] - 69)/12);
-            deviations = 1200 * log2(quantSound ./ referenceHz);
-            [~, idx] = min(abs(deviations));
-            nearestNote = notes(idx);
-            cents = deviations(idx);
 
-            % Apply the same +/- 5 cent tolerance as the report.
-            if cents < -5
-                status = 'Flat';
-                recom_action = 'Tighten string';
-            elseif cents > 5
-                status = 'Sharp';
-                recom_action = 'Loosen string';
-            else
-                status = 'In tune';
-                recom_action = 'No adjustment';
+            while isvalid(app) && strcmp(app.Switch.Value, 'On')   % keep going until switched off or closed
+                recordblocking(rec, 1);
+                audio = getaudiodata(rec);
+                [cleansound, isSilent] = processAudio(audio, fs);
+
+                if isSilent
+                    app.WaitingLabel.Text = 'Play a string';
+                    app.UnknownLabel.Text = '--';
+                    app.HtzLabel_2.Text = '-- cents';
+                    app.NoneLabel.Text = '--';
+                    drawnow;                         % updates the screen and checks the switch
+                    continue;
+                end
+
+                quantSound = measurePitch(cleansound, fs);
+                if ~isfinite(quantSound) || quantSound <= 0
+                    app.WaitingLabel.Text = 'No valid pitch';
+                    app.UnknownLabel.Text = 'Unknown';
+                    app.HtzLabel_2.Text = '-- cents';
+                    app.NoneLabel.Text = 'Try again';
+                    drawnow;
+                    continue;
+                end
+
+                deviations = 1200 * log2(quantSound ./ referenceHz);
+                [~, idx] = min(abs(deviations));
+                cents = deviations(idx);
+                if cents < -5
+                    status = 'Flat';  recom_action = 'Tighten string';
+                elseif cents > 5
+                    status = 'Sharp'; recom_action = 'Loosen string';
+                else
+                    status = 'In tune'; recom_action = 'No adjustment';
+                end
+
+                app.WaitingLabel.Text = sprintf('%.2f Hz', quantSound);
+                app.UnknownLabel.Text = char(notes(idx));
+                app.HtzLabel_2.Text = sprintf('%+.2f cents (%s)', cents, status);
+                app.NoneLabel.Text = recom_action;
+                drawnow;
             end
-
-            app.WaitingLabel.Text = sprintf('%.2f Hz', quantSound);
-            app.UnknownLabel.Text = char(nearestNote);
-            app.HtzLabel_2.Text = sprintf('%+.2f cents (%s)', cents, status);
-            app.NoneLabel.Text = recom_action;
         end
 
         % Button down function: LeftPanel
